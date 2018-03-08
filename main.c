@@ -46,6 +46,8 @@
 #include "task.h"
 #include "semphr.h"
 
+#define MAXCOUNT 10
+
 SemaphoreHandle_t blueLED_semaphore;
 SemaphoreHandle_t greenLED_semaphore;
 
@@ -73,9 +75,16 @@ void blue_led_task(void *arg) {
 }
 
 void green_led_task(void *arg) {
-	if (10 == uxSemaphoreGetCount(greenLED_semaphore)) {
-		GPIO_TogglePinsOutput(GPIOE, 1 << 26);
+	uint8_t i = 0;
+	for (;;) {
+		if (MAXCOUNT == uxSemaphoreGetCount(greenLED_semaphore)) {
+			GPIO_TogglePinsOutput(GPIOE, 1 << 26);
+			while(uxSemaphoreGetCount(greenLED_semaphore)){
+				xSemaphoreTake(greenLED_semaphore, portMAX_DELAY);
+				i++;
+			}
 
+		}
 	}
 
 }
@@ -115,7 +124,7 @@ int main(void) {
 	GPIO_PinInit(GPIOB, 21, &led_config_gpio);
 	GPIO_PinInit(GPIOE, 26, &led_config_gpio);
 
-	gpio_pin_config_t switch_config_gpio = { kGPIO_DigitalInput, 1 };
+	gpio_pin_config_t switch_config_gpio = { kGPIO_DigitalInput, 0 };
 
 	GPIO_PinInit(GPIOA, 4, &switch_config_gpio);
 	GPIO_PinInit(GPIOC, 6, &switch_config_gpio);
@@ -132,10 +141,9 @@ int main(void) {
 	/* The semaphore cannot be used before it is created using a call to xSemaphoreCreateCounting().
 	 The maximum value to which the semaphore can count in this example case is set to 10,
 	 and the initial value assigned to the count is set to 0. */
-	greenLED_semaphore = xSemaphoreCreateCounting(10, 0);
-	xTaskCreate(blue_led_task, "blue LED task", configMINIMAL_STACK_SIZE,
-	NULL,
-	configMAX_PRIORITIES - 1, NULL);
+	greenLED_semaphore = xSemaphoreCreateCounting(MAXCOUNT, 0);
+	xTaskCreate(blue_led_task, "blue LED task", configMINIMAL_STACK_SIZE, NULL,
+			configMAX_PRIORITIES - 1, NULL);
 
 	if (greenLED_semaphore != NULL) {
 		/* The semaphore was created successfully. The semaphore can now be used. */
