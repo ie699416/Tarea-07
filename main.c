@@ -75,13 +75,13 @@ void blue_led_task(void *arg) {
 }
 
 void green_led_task(void *arg) {
-	uint8_t i = 0;
+
 	for (;;) {
 		if (MAXCOUNT == uxSemaphoreGetCount(greenLED_semaphore)) {
 			GPIO_TogglePinsOutput(GPIOE, 1 << 26);
 			while(uxSemaphoreGetCount(greenLED_semaphore)){
 				xSemaphoreTake(greenLED_semaphore, portMAX_DELAY);
-				i++;
+
 			}
 
 		}
